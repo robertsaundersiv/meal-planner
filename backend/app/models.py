@@ -1,8 +1,9 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Float, Text, Boolean, Enum, Date
 from sqlalchemy.orm import relationship, declarative_base
 import enum
+from .database import Base
 
-Base = declarative_base()
+# Base = declarative_base()
 
 class TagType(str, enum.Enum):
     descriptive = "descriptive"

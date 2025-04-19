@@ -7,11 +7,9 @@ from sqlalchemy.orm import Session
 from . import crud, models, schemas
 from .database import SessionLocal, engine, Base
 from .auth import authenticate
-from typing import List
 
 
-
-app = FastAPI()
+app = FastAPI(dependencies=[Depends(authenticate)])
 security = HTTPBasic()
 
 # Create database tables
@@ -56,19 +54,3 @@ app.add_middleware(
 )
 
 
-@app.post("/ingredients/", response_model=schemas.Ingredient)
-def create_ingredient(
-    ingredient: schemas.IngredientCreate,
-    db: Session = Depends(get_db),
-    user: str = Depends(authenticate)
-):
-    return crud.create_ingredient(db=db, ingredient=ingredient)
-
-@app.get("/ingredients/", response_model=List[schemas.Ingredient])
-def read_ingredients(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db),
-    user: str = Depends(authenticate)
-):
-    return crud.get_ingredients(db, skip=skip, limit=limit)
