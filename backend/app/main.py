@@ -72,3 +72,58 @@ def read_ingredients(
     user: str = Depends(authenticate)
 ):
     return crud.get_ingredients(db, skip=skip, limit=limit)
+
+@app.post("/recipes/validate-ingredients", response_model=schemas.IngredientValidationResponse)
+def validate_ingredient_names(
+    payload: schemas.IngredientValidationRequest,
+    db: Session = Depends(get_db),
+    user: str = Depends(authenticate)
+):
+    missing = []
+
+    for ing in payload.ingredients:
+        existing = db.query(models.Ingredient).filter_by(name=ing.name).first()
+        if not existing:
+            missing.append({"name": ing.name})
+
+    return {"missing_ingredients": missing}
+
+@app.post("/ingredients/resolve", response_model=schemas.IngredientResolveResponse)
+def resolve_missing_ingredients(
+    payload: schemas.IngredientResolveRequest,
+    db: Session = Depends(get_db),
+    user: str = Depends(authenticate)
+):
+    created = []
+    skipped = []
+    missing_info = []
+
+    for ing in payload.ingredients:
+        existing = db.query(models.Ingredient).filter_by(name=ing.name).first()
+        if existing:
+            skipped.append(ing.name)
+            continue
+
+        missing_fields = []
+        if not ing.category:
+            missing_fields.append("category")
+
+        if missing_fields:
+            missing_info.append({
+                "name": ing.name,
+                "missing": missing_fields
+            })
+            continue
+
+        # Create new ingredient
+        new_ing = models.Ingredient(name=ing.name, category=ing.category)
+        db.add(new_ing)
+        db.commit()
+        db.refresh(new_ing)
+        created.append(ing.name)
+
+    return {
+        "created": created,
+        "skipped": skipped,
+        "missing_info": missing_info
+    }
